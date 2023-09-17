@@ -21,7 +21,7 @@ styles = [torch.load(f"styles/{path}") for path in os.listdir("styles")]
 
 def stylize(image, style):
 
-    content_image = tensor_load_rgbimage(image, size=400, keep_asp=True).unsqueeze(0)
+    content_image = tensor_load_rgbimage(image, size=600, keep_asp=True).unsqueeze(0)
 
     style_v = Variable(style)
     content_image = Variable(preprocess_batch(content_image))
