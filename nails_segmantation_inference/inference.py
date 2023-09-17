@@ -46,9 +46,7 @@ def transform_mask(pred_mask, border_h, border_w, orig_h, orig_w):
     binary_mask = cv2.threshold(resized_mask, 128, 255, cv2.THRESH_BINARY)[1]
     return np.uint8(binary_mask)
     
-def segment_nails(image_path):
-    model_path = 'best_model_80_v1.pth'
-    preprocessing_fn_path = 'preprocessing_fn_80_v1.pkl'
+def segment_nails(image_path, model_path, preprocessing_fn_path):
     device = torch.device('cpu')
     model = torch.load(model_path, map_location = device)
     preprocessing_fn = pickle.load(open(preprocessing_fn_path, 'rb'))
@@ -66,7 +64,7 @@ def segment_nails(image_path):
     
     # orig_h, orig_w = transformed_mask.shape[:2]
     # print('transformed_mask orig_h, orig_w', orig_h, orig_w)
-    cv2.imwrite('transformed_mask.jpg', cv2.cvtColor(transformed_mask, cv2.COLOR_RGB2BGR))
+    # cv2.imwrite('transformed_mask.jpg', cv2.cvtColor(transformed_mask, cv2.COLOR_RGB2BGR))
     
     # masked_nails = image.copy()
     # for i in range(3):
@@ -81,4 +79,7 @@ if __name__ == '__main__':
     ap = argparse.ArgumentParser()
     ap.add_argument("-i", "--img_path", required = True, help = 'image path for predict')
     args = ap.parse_args()
-    segment_nails(image_path=args.img_path)
+    model_path = 'best_model_80_v1.pth'
+    preprocessing_fn_path = 'preprocessing_fn_80_v1.pkl'
+    mask = segment_nails(args.img_path, model_path, preprocessing_fn_path)
+    cv2.imwrite('result_mask.jpg', cv2.cvtColor(mask, cv2.COLOR_RGB2BGR))
