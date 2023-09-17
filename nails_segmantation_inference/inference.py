@@ -43,9 +43,25 @@ def transform_mask(pred_mask, border_h, border_w, orig_h, orig_w):
     pred_mask_resized = cv2.resize(pred_mask, (orig_h + 2 * border_w, orig_w + 2 * border_h))
     h, w = pred_mask_resized.shape[:2]
     resized_mask = pred_mask_resized[border_w:h-border_w, border_h:w-border_h] * 255
-    binary_mask = cv2.threshold(resized_mask, 128, 255, cv2.THRESH_BINARY)[1]
+    binary_mask = cv2.threshold(resized_mask, 128, 1, cv2.THRESH_BINARY)[1]
     return np.uint8(binary_mask)
-    
+
+
+def create_alpha_channel(mask):
+    GRADIENT_LAYERS_COUNT = 4
+    kernel_3x3 = np.ones((3,3), np.uint8)
+    mask = cv2.erode(mask.copy(), kernel_3x3, iterations = 1)
+    last_gradient = mask.copy()
+    alpha_channel = np.float32(mask.copy())
+    for idx in range(0, GRADIENT_LAYERS_COUNT - 1):
+        alpha_value = round((GRADIENT_LAYERS_COUNT - 1 - idx) / GRADIENT_LAYERS_COUNT, 2)
+        dilation_step = cv2.dilate(last_gradient, kernel_3x3, iterations=1)
+        intersection_step = cv2.bitwise_and(dilation_step, cv2.bitwise_not(last_gradient))
+        last_gradient = dilation_step.copy()
+        alpha_channel += intersection_step * alpha_value
+
+    return alpha_channel
+
 def segment_nails(image_path, model_path, preprocessing_fn_path):
     device = torch.device('cpu')
     model = torch.load(model_path, map_location = device)
@@ -54,25 +70,14 @@ def segment_nails(image_path, model_path, preprocessing_fn_path):
     image = cv2.cvtColor(cv2.imread(image_path), cv2.COLOR_BGR2RGB)
     orig_h, orig_w = image.shape[:2]
     prepared_img, border_h, border_v = prepare_image(image)
-    # cv2.imwrite('prepared.jpg', cv2.cvtColor(prepared_img, cv2.COLOR_RGB2BGR))
     preprocessing = get_preprocessing(preprocessing_fn)
     preprocessed_image = preprocessing(image=prepared_img)['image']
-    # cv2.imwrite('preprocessed.jpg', cv2.cvtColor(preprocessed_image.transpose([1, 2, 0]), cv2.COLOR_RGB2BGR) * 128)
     pred_mask = get_predicted_mask(model, preprocessed_image, device)
-    # cv2.imwrite('pred_mask.jpg', cv2.cvtColor(pred_mask, cv2.COLOR_RGB2BGR) * 255)
-    transformed_mask = transform_mask(pred_mask, border_h, border_v, orig_h, orig_w)
-    
-    # orig_h, orig_w = transformed_mask.shape[:2]
-    # print('transformed_mask orig_h, orig_w', orig_h, orig_w)
-    # cv2.imwrite('transformed_mask.jpg', cv2.cvtColor(transformed_mask, cv2.COLOR_RGB2BGR))
-    
-    # masked_nails = image.copy()
-    # for i in range(3):
-    #     print(transformed_mask)
-    #     masked_nails[:,:,i] = cv2.bitwise_and(masked_nails[:,:,i], masked_nails[:,:,i], mask=transformed_mask)
-    # cv2.imwrite('masked_nails.jpg', cv2.cvtColor(masked_nails, cv2.COLOR_RGB2BGR))
-    
-    return transformed_mask
+    binary_mask_prototype = transform_mask(pred_mask, border_h, border_v, orig_h, orig_w)
+    alpha_channel = create_alpha_channel(binary_mask_prototype)
+    binary_mask = np.uint8(cv2.threshold(alpha_channel, 0.01, 1, cv2.THRESH_BINARY)[1])
+
+    return 255 * binary_mask, alpha_channel
 
 
 if __name__ == '__main__':
