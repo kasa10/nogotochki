@@ -6,8 +6,12 @@ import pickle
 import torch
 
 
-def get_predicted_mask(model, processed_img, device):
-    x_tensor = torch.from_numpy(processed_img).to(device).unsqueeze(0)
+model = torch.load("nails_segmantation_inference/best_model_80_v1.pth", map_location=torch.device('cpu'))
+preprocessing_fn = pickle.load(open("nails_segmantation_inference/preprocessing_fn_80_v1.pkl", 'rb'))
+
+
+def get_predicted_mask(model, processed_img):
+    x_tensor = torch.from_numpy(processed_img).unsqueeze(0)
     pred_mask = model(x_tensor)
     pred_mask = pred_mask.detach().squeeze().cpu().numpy()
     pred_mask = np.transpose(pred_mask,(1,2,0))
@@ -35,7 +39,7 @@ def get_preprocessing(preprocessing_fn=None):
     if preprocessing_fn:
         _transform.append(album.Lambda(image=preprocessing_fn))
     _transform.append(album.Lambda(image=to_tensor, mask=to_tensor))
-        
+
     return album.Compose(_transform)
 
 
@@ -62,17 +66,15 @@ def create_alpha_channel(mask):
 
     return alpha_channel
 
-def segment_nails(image_path, model_path, preprocessing_fn_path):
-    device = torch.device('cpu')
-    model = torch.load(model_path, map_location = device)
-    preprocessing_fn = pickle.load(open(preprocessing_fn_path, 'rb'))
+def segment_nails(img):
 
-    image = cv2.cvtColor(cv2.imread(image_path), cv2.COLOR_BGR2RGB)
+    # изначально BGR
+    image = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     orig_h, orig_w = image.shape[:2]
     prepared_img, border_h, border_v = prepare_image(image)
     preprocessing = get_preprocessing(preprocessing_fn)
     preprocessed_image = preprocessing(image=prepared_img)['image']
-    pred_mask = get_predicted_mask(model, preprocessed_image, device)
+    pred_mask = get_predicted_mask(model, preprocessed_image)
     binary_mask_prototype = transform_mask(pred_mask, border_h, border_v, orig_h, orig_w)
     alpha_channel = create_alpha_channel(binary_mask_prototype)
     binary_mask = np.uint8(cv2.threshold(alpha_channel, 0.01, 1, cv2.THRESH_BINARY)[1])

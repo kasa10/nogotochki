@@ -3,7 +3,7 @@ FROM python:3.11-slim
 RUN apt-get update && apt-get install -y ffmpeg libsm6 libxext6 && apt clean -y
 
 RUN pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch && \
-    pip install --no-cache-dir albumentations opencv-python numpy streamlit
+    pip install --no-cache-dir albumentations opencv-python numpy streamlit segmentation_models_pytorch
 
 WORKDIR /app
 
