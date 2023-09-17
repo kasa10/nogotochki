@@ -1,0 +1,7 @@
+albumentations
+opencv-python
+numpy
+streamlit
+segmentation_models_pytorch
+--index-url https://test.pypi.org/simple/
+torch
