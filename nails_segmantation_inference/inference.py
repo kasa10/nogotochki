@@ -77,6 +77,8 @@ def segment_nails(image_path, model_path, preprocessing_fn_path):
     alpha_channel = create_alpha_channel(binary_mask_prototype)
     binary_mask = np.uint8(cv2.threshold(alpha_channel, 0.01, 1, cv2.THRESH_BINARY)[1])
 
+    binary_mask = cv2.resize(binary_mask, (orig_w, orig_h))
+    alpha_channel = cv2.resize(alpha_channel, (orig_w, orig_h))
     return 255 * binary_mask, alpha_channel
 
 
