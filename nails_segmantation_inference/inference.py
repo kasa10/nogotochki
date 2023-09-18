@@ -6,7 +6,7 @@ import pickle
 import torch
 
 
-model = torch.load("nails_segmantation_inference/best_model_80_v1.pth", map_location=torch.device('cpu'))
+model = torch.load("nails_segmantation_inference/best_model_v2.pth", map_location=torch.device('cpu'))
 preprocessing_fn = pickle.load(open("nails_segmantation_inference/preprocessing_fn_80_v1.pkl", 'rb'))
 
 
@@ -88,7 +88,7 @@ if __name__ == '__main__':
     ap = argparse.ArgumentParser()
     ap.add_argument("-i", "--img_path", required = True, help = 'image path for predict')
     args = ap.parse_args()
-    model_path = 'best_model_80_v1.pth'
+    model_path = 'best_model_v2.pth'
     preprocessing_fn_path = 'preprocessing_fn_80_v1.pkl'
     mask = segment_nails(args.img_path, model_path, preprocessing_fn_path)
     cv2.imwrite('result_mask.jpg', cv2.cvtColor(mask, cv2.COLOR_RGB2BGR))
